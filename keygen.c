@@ -6,8 +6,7 @@
 
 
 void generateKey(int keyLength) {
-    char key[keyLength + 1];
-
+    char *key = calloc(keyLength + 1, sizeof(char));
     //Generate random chars for the key
     for(int i = 0; i < keyLength; i++) {
         int randNum = random() % 27 + 1;
@@ -20,12 +19,14 @@ void generateKey(int keyLength) {
         }
 
         char randChar = randNum;
-        key[i] = randChar;
+        strncat(key, &randChar, 1);
     }
 
     key[keyLength] = '\n'; //append new line char to end of key
-
-    printf("%s", key);
+    
+    write(1, key, keyLength + 1);
+    fflush(stdout);
+    free(key);
 }
 
 
