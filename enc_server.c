@@ -57,7 +57,8 @@ int main(int argc, char *argv[]){
 
   // Start listening for connetions. Allow up to 5 connections to queue up
   listen(listenSocket, 5); 
-  
+
+  int isEncClient = 0;
   // Accept a connection, blocking if one is not available until one connects
   while(1){
     // Accept the connection request which creates a connection socket
@@ -80,6 +81,28 @@ int main(int argc, char *argv[]){
       error("ERROR reading from socket");
     }
     printf("SERVER: I received this from the client: \"%s\"\n", buffer);
+
+    //Verify identifty of client
+    if(isEncClient < 1) {
+      if(strcmp(buffer, "E") != 0) {
+        // Send a denied message back to the client
+        charsRead = send(connectionSocket, 
+                        "Denied", 7, 0); 
+        if (charsRead < 0){
+          error("ERROR writing to socket");
+        }
+      }
+      else{
+        // Send a success message back to the client
+        charsRead = send(connectionSocket, 
+                        "Accepted", 9, 0); 
+        if (charsRead < 0)
+          error("ERROR writing to socket");
+        isEncClient = 1;
+      }
+      close(connectionSocket);
+      continue;
+    }
 
     // Send a Success message back to the client
     charsRead = send(connectionSocket, 

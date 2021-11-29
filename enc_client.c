@@ -67,6 +67,34 @@ int main(int argc, char *argv[]) {
   if (connect(socketFD, (struct sockaddr*)&serverAddress, sizeof(serverAddress)) < 0){
     error("CLIENT: ERROR connecting");
   }
+  //if connection fails --> use stderr and set exit value to 2
+
+  //send identifier to make sure client connects to the correct server
+  //char *identifier = "E";
+
+  charsWritten = send(socketFD, "E", 1, 0); 
+
+  if (charsWritten < 0){
+    error("CLIENT: ERROR writing to socket");
+  }
+
+  charsRead = recv(socketFD, buffer, sizeof(buffer) - 1, 0); 
+  //printf("%s", buffer);
+  if (charsRead < 0){
+    error("CLIENT: ERROR reading from socket");
+  }
+  if (strcmp(buffer, "Denied") == 0) {
+    fprintf(stderr, "CLIENT: Connection to server denied\n"); 
+    close(socketFD);
+    return 2;
+  }
+
+  
+  //send the plaintext
+  //send the key
+  //print the encrypted key to stdout
+
+  // modify the code underneath
   // Get input message from user
   printf("CLIENT: Enter text to send to the server, and then hit enter: ");
   // Clear out the buffer array
