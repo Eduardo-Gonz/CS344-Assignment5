@@ -53,6 +53,10 @@ int main(int argc, char *argv[]) {
     fprintf(stderr,"USAGE: %s hostname port\n", argv[0]); 
     exit(0); 
   } 
+  //0 program name
+  //1 plaintext
+  //2 key
+  // port numbr
 
   // Create a socket
   socketFD = socket(AF_INET, SOCK_STREAM, 0); 
@@ -80,16 +84,17 @@ int main(int argc, char *argv[]) {
   }
 
   charsRead = recv(socketFD, buffer, sizeof(buffer) - 1, 0); 
-  //printf("%s", buffer);
+  printf("%s", buffer);
   if (charsRead < 0){
     error("CLIENT: ERROR reading from socket");
   }
   if (strcmp(buffer, "Denied") == 0) {
     fprintf(stderr, "CLIENT: Connection to server denied\n"); 
     close(socketFD);
-    return 2;
+    exit(2);
   }
-  printf("CLIENT: I received this from the server: \"%s\"\n", buffer);
+
+
 
   
   //send the plaintext

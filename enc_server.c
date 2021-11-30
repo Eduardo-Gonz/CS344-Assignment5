@@ -28,10 +28,11 @@ void setupAddressStruct(struct sockaddr_in* address,
 }
 
 int main(int argc, char *argv[]){
-  int connectionSocket, charsRead;
+  int connectionSocket, charsRead, childStatus;
   char buffer[256];
   struct sockaddr_in serverAddress, clientAddress;
   socklen_t sizeOfClientInfo = sizeof(clientAddress);
+  pid_t spawnPid;
 
   // Check usage & args
   if (argc < 2) { 
@@ -47,7 +48,6 @@ int main(int argc, char *argv[]){
 
   // Set up the address struct for the server socket
   setupAddressStruct(&serverAddress, atoi(argv[1]));
-
   // Associate the socket to the port
   if (bind(listenSocket, 
           (struct sockaddr *)&serverAddress, 
@@ -57,58 +57,71 @@ int main(int argc, char *argv[]){
 
   // Start listening for connetions. Allow up to 5 connections to queue up
   listen(listenSocket, 5);
-
-  int isEncClient = 0;
-  // Accept a connection, blocking if one is not available until one connects
+  
   while(1){
     // Accept the connection request which creates a connection socket
     connectionSocket = accept(listenSocket, 
                 (struct sockaddr *)&clientAddress, 
                 &sizeOfClientInfo); 
-    if (connectionSocket < 0){
+    if (connectionSocket < 0)
       error("ERROR on accept");
-    }
 
-    // Get the message from the client and display it
-    memset(buffer, '\0', 256);
-    // Read the client's message from the socket
-    charsRead = recv(connectionSocket, buffer, 255, 0); 
-    if (charsRead < 0){
-      error("ERROR reading from socket");
-    }
-    printf("SERVER: I received this from the client: \"%s\"\n", buffer);
+    spawnPid = fork();
+    switch(spawnPid){
+          case -1:
+              perror("fork()\n");
+              exit(1);
+              break;
+          case 0:
+              //Child Process
 
-    //Verify identifty of client
-    if(isEncClient < 1) {
-      if(strcmp(buffer, "E") != 0) {
-        // Send a denied message back to the client
-        charsRead = send(connectionSocket, 
-                        "Denied", 7, 0); 
-        if (charsRead < 0){
-          error("ERROR writing to socket");
-        }
-        close(connectionSocket);
-        continue;
-      }
-      else{
-        // Send a success message back to the client
-        charsRead = send(connectionSocket, 
-                        "Accepted", 9, 0); 
-        if (charsRead < 0)
-          error("ERROR writing to socket");
-        isEncClient = 1;
-      }
-    }
+              //clear buffer
+              memset(buffer, '\0', 256);
+              // Read the client's identifier from the socket
+              charsRead = recv(connectionSocket, buffer, 255, 0); 
+              if (charsRead < 0)
+                error("ERROR reading from socket");
 
-    // Send a Success message back to the client
-    charsRead = send(connectionSocket, 
-                    "I am the server, and I got your message", 39, 0); 
-    if (charsRead < 0){
-      error("ERROR writing to socket");
-    }
+              //Verify identifty of client
+              if(strcmp(buffer, "E") != 0) {
+                // Send a denied message back to the client
+                charsRead = send(connectionSocket, 
+                                "Denied", 6, 0); 
+                if (charsRead < 0)
+                  error("ERROR writing to socket");
+                }
+              else{
+                  // Send a success message back to the client
+                charsRead = send(connectionSocket, 
+                                "Accepted", 8, 0); 
+                if (charsRead < 0)
+                  error("ERROR writing to socket");
+              }
+
+              // Get the message from the client and display it
+              memset(buffer, '\0', 256);
+              // Read the client's message from the socket
+              charsRead = recv(connectionSocket, buffer, 255, 0); 
+              if (charsRead < 0)
+                error("ERROR reading from socket");
+
+              printf("HERE: I received this from the client: \"%s\"\n", buffer);
+
+              // Send a Success message back to the client
+              charsRead = send(connectionSocket, 
+                              "I am the server, and I got your message", 39, 0); 
+              if (charsRead < 0)
+                error("ERROR writing to socket");
+
+              break;
+          default:
+              spawnPid = waitpid(spawnPid, &childStatus, 0);
+              break;
+    } 
     // Close the connection socket for this client
     close(connectionSocket); 
   }
+
   // Close the listening socket
   close(listenSocket); 
   return 0;

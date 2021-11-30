@@ -53,6 +53,10 @@ int main(int argc, char *argv[]) {
     fprintf(stderr,"USAGE: %s hostname port\n", argv[0]); 
     exit(0); 
   } 
+  //0 program name
+  //1 plaintext
+  //2 key
+  // port numbr
 
   // Create a socket
   socketFD = socket(AF_INET, SOCK_STREAM, 0); 
@@ -63,32 +67,42 @@ int main(int argc, char *argv[]) {
    // Set up the server address struct
   setupAddressStruct(&serverAddress, atoi(argv[2]), argv[1]);
 
+  //grab contents of plaintext file
+    //make sure that the characters in the file are A-Z and space
+    //quit program if file isn't correct
+  // do the same for the key file
+
   // Connect to server
   if (connect(socketFD, (struct sockaddr*)&serverAddress, sizeof(serverAddress)) < 0){
     error("CLIENT: ERROR connecting");
   }
-  
+
   charsWritten = send(socketFD, "D", 1, 0); 
 
   if (charsWritten < 0){
     error("CLIENT: ERROR writing to socket");
   }
 
-  charsRead = recv(socketFD, buffer, sizeof(buffer) - 1, 0);
-  
+  charsRead = recv(socketFD, buffer, sizeof(buffer) - 1, 0); 
+  printf("%s", buffer);
   if (charsRead < 0){
     error("CLIENT: ERROR reading from socket");
   }
   if (strcmp(buffer, "Denied") == 0) {
     fprintf(stderr, "CLIENT: Connection to server denied\n"); 
     close(socketFD);
-    return 2;
+    exit(2);
   }
+
+
 
   
   //send the plaintext
+    //while loop to send this file
   //send the key
+    //while loop to send this file
   //print the encrypted key to stdout
+    //while loop to receive what server is sending
 
   // modify the code underneath
   // Get input message from user
@@ -124,3 +138,5 @@ int main(int argc, char *argv[]) {
   close(socketFD); 
   return 0;
 }
+
+//2 while loops in the server also.
