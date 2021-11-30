@@ -56,7 +56,7 @@ int main(int argc, char *argv[]){
   }
 
   // Start listening for connetions. Allow up to 5 connections to queue up
-  listen(listenSocket, 5); 
+  listen(listenSocket, 5);
 
   int isEncClient = 0;
   // Accept a connection, blocking if one is not available until one connects
@@ -68,10 +68,6 @@ int main(int argc, char *argv[]){
     if (connectionSocket < 0){
       error("ERROR on accept");
     }
-
-    printf("SERVER: Connected to client running at host %d port %d\n", 
-                          ntohs(clientAddress.sin_addr.s_addr),
-                          ntohs(clientAddress.sin_port));
 
     // Get the message from the client and display it
     memset(buffer, '\0', 256);
@@ -91,6 +87,8 @@ int main(int argc, char *argv[]){
         if (charsRead < 0){
           error("ERROR writing to socket");
         }
+        close(connectionSocket);
+        continue;
       }
       else{
         // Send a success message back to the client
@@ -100,8 +98,6 @@ int main(int argc, char *argv[]){
           error("ERROR writing to socket");
         isEncClient = 1;
       }
-      close(connectionSocket);
-      continue;
     }
 
     // Send a Success message back to the client

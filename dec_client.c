@@ -67,19 +67,15 @@ int main(int argc, char *argv[]) {
   if (connect(socketFD, (struct sockaddr*)&serverAddress, sizeof(serverAddress)) < 0){
     error("CLIENT: ERROR connecting");
   }
-  //if connection fails --> use stderr and set exit value to 2
-
-  //send identifier to make sure client connects to the correct server
-  //char *identifier = "E";
-
+  
   charsWritten = send(socketFD, "D", 1, 0); 
 
   if (charsWritten < 0){
     error("CLIENT: ERROR writing to socket");
   }
 
-  charsRead = recv(socketFD, buffer, sizeof(buffer) - 1, 0); 
-  //printf("%s", buffer);
+  charsRead = recv(socketFD, buffer, sizeof(buffer) - 1, 0);
+  
   if (charsRead < 0){
     error("CLIENT: ERROR reading from socket");
   }

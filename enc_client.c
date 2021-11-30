@@ -63,14 +63,15 @@ int main(int argc, char *argv[]) {
    // Set up the server address struct
   setupAddressStruct(&serverAddress, atoi(argv[2]), argv[1]);
 
+  //grab contents of plaintext file
+    //make sure that the characters in the file are A-Z and space
+    //quit program if file isn't correct
+  // do the same for the key file
+
   // Connect to server
   if (connect(socketFD, (struct sockaddr*)&serverAddress, sizeof(serverAddress)) < 0){
     error("CLIENT: ERROR connecting");
   }
-  //if connection fails --> use stderr and set exit value to 2
-
-  //send identifier to make sure client connects to the correct server
-  //char *identifier = "E";
 
   charsWritten = send(socketFD, "E", 1, 0); 
 
@@ -88,11 +89,15 @@ int main(int argc, char *argv[]) {
     close(socketFD);
     return 2;
   }
+  printf("CLIENT: I received this from the server: \"%s\"\n", buffer);
 
   
   //send the plaintext
+    //while loop to send this file
   //send the key
+    //while loop to send this file
   //print the encrypted key to stdout
+    //while loop to receive what server is sending
 
   // modify the code underneath
   // Get input message from user
@@ -128,3 +133,5 @@ int main(int argc, char *argv[]) {
   close(socketFD); 
   return 0;
 }
+
+//2 while loops in the server also.
