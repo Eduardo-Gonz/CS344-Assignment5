@@ -5,6 +5,9 @@
 #include <sys/types.h>  // ssize_t
 #include <sys/socket.h> // send(),recv()
 #include <netdb.h>      // gethostbyname()
+#include <fcntl.h>
+#include <stdint.h>
+#include <dirent.h>
 
 /**
 * Client code
@@ -44,19 +47,45 @@ void setupAddressStruct(struct sockaddr_in* address,
         hostInfo->h_length);
 }
 
+char *grabFile(char *fileName) {
+  char * line = NULL;
+	size_t len = 0;
+	ssize_t read;
+
+  FILE *fp = fopen(fileName, "r");
+	if (fp == NULL)
+		exit(1);
+
+	read = getline(&line, &len, fp);
+	fclose(fp);
+
+  return line;
+}
+
+int validateFile(char *file) {
+  //go through the characters and make sure they are all alphabet characters or spaces.
+  return 1;
+}
+
 int main(int argc, char *argv[]) {
   int socketFD, portNumber, charsWritten, charsRead;
   struct sockaddr_in serverAddress;
   char buffer[256];
   // Check usage & args
-  if (argc < 3) { 
-    fprintf(stderr,"USAGE: %s hostname port\n", argv[0]); 
+  if (argc < 4) { 
+    fprintf(stderr,"USAGE: %s plaintext key port\n", argv[0]); 
     exit(0); 
   } 
-  //0 program name
-  //1 plaintext
-  //2 key
-  // port numbr
+  
+  char *plainTxt = grabFile(argv[1]);
+  char *keyTxt = grabFile(argv[2]);
+
+  printf("PLAIN: %s\n", plainTxt);
+  printf("KEY: %s", keyTxt);
+
+  //open the files and validate them in two different functions
+  //function one will open them
+  //function two will validate them
 
   // Create a socket
   socketFD = socket(AF_INET, SOCK_STREAM, 0); 
@@ -65,7 +94,8 @@ int main(int argc, char *argv[]) {
   }
 
    // Set up the server address struct
-  setupAddressStruct(&serverAddress, atoi(argv[2]), argv[1]);
+  setupAddressStruct(&serverAddress, atoi(argv[3]), "localhost");
+
 
   //grab contents of plaintext file
     //make sure that the characters in the file are A-Z and space
@@ -73,69 +103,71 @@ int main(int argc, char *argv[]) {
   // do the same for the key file
 
   // Connect to server
-  if (connect(socketFD, (struct sockaddr*)&serverAddress, sizeof(serverAddress)) < 0){
-    error("CLIENT: ERROR connecting");
-  }
+  // if (connect(socketFD, (struct sockaddr*)&serverAddress, sizeof(serverAddress)) < 0){
+  //   error("CLIENT: ERROR connecting");
+  // }
 
-  charsWritten = send(socketFD, "E", 1, 0); 
+  // charsWritten = send(socketFD, "E", 1, 0); 
 
-  if (charsWritten < 0){
-    error("CLIENT: ERROR writing to socket");
-  }
+  // if (charsWritten < 0){
+  //   error("CLIENT: ERROR writing to socket");
+  // }
 
-  charsRead = recv(socketFD, buffer, sizeof(buffer) - 1, 0); 
-  printf("%s", buffer);
-  if (charsRead < 0){
-    error("CLIENT: ERROR reading from socket");
-  }
-  if (strcmp(buffer, "Denied") == 0) {
-    fprintf(stderr, "CLIENT: Connection to server denied\n"); 
-    close(socketFD);
-    exit(2);
-  }
+  // charsRead = recv(socketFD, buffer, sizeof(buffer) - 1, 0); 
+  // printf("%s", buffer);
+  // if (charsRead < 0){
+  //   error("CLIENT: ERROR reading from socket");
+  // }
+  // if (strcmp(buffer, "Denied") == 0) {
+  //   fprintf(stderr, "CLIENT: Connection to server denied\n"); 
+  //   close(socketFD);
+  //   exit(2);
+  // }
 
 
 
   
-  //send the plaintext
-    //while loop to send this file
-  //send the key
-    //while loop to send this file
-  //print the encrypted key to stdout
-    //while loop to receive what server is sending
+  // //send the plaintext
+  //   //while loop to send this file
+  // //send the key
+  //   //while loop to send this file
+  // //print the encrypted key to stdout
+  //   //while loop to receive what server is sending
 
-  // modify the code underneath
-  // Get input message from user
-  printf("CLIENT: Enter text to send to the server, and then hit enter: ");
-  // Clear out the buffer array
-  memset(buffer, '\0', sizeof(buffer));
-  // Get input from the user, trunc to buffer - 1 chars, leaving \0
-  fgets(buffer, sizeof(buffer) - 1, stdin);
-  // Remove the trailing \n that fgets adds
-  buffer[strcspn(buffer, "\n")] = '\0'; 
+  // // modify the code underneath
+  // // Get input message from user
+  // printf("CLIENT: Enter text to send to the server, and then hit enter: ");
+  // // Clear out the buffer array
+  // memset(buffer, '\0', sizeof(buffer));
+  // // Get input from the user, trunc to buffer - 1 chars, leaving \0
+  // fgets(buffer, sizeof(buffer) - 1, stdin);
+  // // Remove the trailing \n that fgets adds
+  // buffer[strcspn(buffer, "\n")] = '\0'; 
 
-  // Send message to server
-  // Write to the server
-  charsWritten = send(socketFD, buffer, strlen(buffer), 0); 
-  if (charsWritten < 0){
-    error("CLIENT: ERROR writing to socket");
-  }
-  if (charsWritten < strlen(buffer)){
-    printf("CLIENT: WARNING: Not all data written to socket!\n");
-  }
+  // // Send message to server
+  // // Write to the server
+  // charsWritten = send(socketFD, buffer, strlen(buffer), 0); 
+  // if (charsWritten < 0){
+  //   error("CLIENT: ERROR writing to socket");
+  // }
+  // if (charsWritten < strlen(buffer)){
+  //   printf("CLIENT: WARNING: Not all data written to socket!\n");
+  // }
 
-  // Get return message from server
-  // Clear out the buffer again for reuse
-  memset(buffer, '\0', sizeof(buffer));
-  // Read data from the socket, leaving \0 at end
-  charsRead = recv(socketFD, buffer, sizeof(buffer) - 1, 0); 
-  if (charsRead < 0){
-    error("CLIENT: ERROR reading from socket");
-  }
-  printf("CLIENT: I received this from the server: \"%s\"\n", buffer);
+  // // Get return message from server
+  // // Clear out the buffer again for reuse
+  // memset(buffer, '\0', sizeof(buffer));
+  // // Read data from the socket, leaving \0 at end
+  // charsRead = recv(socketFD, buffer, sizeof(buffer) - 1, 0); 
+  // if (charsRead < 0){
+  //   error("CLIENT: ERROR reading from socket");
+  // }
+  // printf("CLIENT: I received this from the server: \"%s\"\n", buffer);
 
-  // Close the socket
-  close(socketFD); 
+  // // Close the socket
+  // close(socketFD); 
+  free(plainTxt);
+  free(keyTxt);
   return 0;
 }
 
