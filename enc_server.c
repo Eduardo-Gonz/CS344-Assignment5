@@ -5,6 +5,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <sys/wait.h>
 
 // Error function used for reporting issues
 void error(const char *msg) {
@@ -57,7 +58,7 @@ int main(int argc, char *argv[]){
 
   // Start listening for connetions. Allow up to 5 connections to queue up
   listen(listenSocket, 5);
-  
+
   while(1){
     // Accept the connection request which creates a connection socket
     connectionSocket = accept(listenSocket, 
