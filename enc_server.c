@@ -30,7 +30,7 @@ void setupAddressStruct(struct sockaddr_in* address,
 
 int main(int argc, char *argv[]){
   int connectionSocket, charsRead, childStatus;
-  char buffer[256];
+  char buffer[1000];
   struct sockaddr_in serverAddress, clientAddress;
   socklen_t sizeOfClientInfo = sizeof(clientAddress);
   pid_t spawnPid;
@@ -77,7 +77,7 @@ int main(int argc, char *argv[]){
               //Child Process
 
               //clear buffer
-              memset(buffer, '\0', 256);
+              memset(buffer, '\0', 1000);
               // Read the client's identifier from the socket
               charsRead = recv(connectionSocket, buffer, 255, 0); 
               if (charsRead < 0)
@@ -99,21 +99,22 @@ int main(int argc, char *argv[]){
                   error("ERROR writing to socket");
               }
 
-              // Get the message from the client and display it
-              memset(buffer, '\0', 256);
-              // Read the client's message from the socket
-              charsRead = recv(connectionSocket, buffer, 255, 0); 
-              if (charsRead < 0)
-                error("ERROR reading from socket");
+              //clear buffer
+              memset(buffer, '\0', 1000);
+              int total = 0;
 
-              printf("HERE: I received this from the client: \"%s\"\n", buffer);
-
-              // Send a Success message back to the client
-              charsRead = send(connectionSocket, 
-                              "I am the server, and I got your message", 39, 0); 
-              if (charsRead < 0)
-                error("ERROR writing to socket");
-
+              while (1){
+                  memset(buffer, '\0', 1000);
+                  charsRead = recv(connectionSocket, buffer, 1000, 0);
+                  if (charsRead < 0)
+                    error("ERROR reading from socket");
+                  if(charsRead == 0)
+                    break;
+                  printf("%s\n", buffer);
+                  total += charsRead;
+              }
+                
+              //printf("HERE: I received this from the client: \"%s\"\n", buffer);
               break;
           default:
               spawnPid = waitpid(spawnPid, &childStatus, 0);
