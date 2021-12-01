@@ -10,6 +10,7 @@
 // Error function used for reporting issues
 void error(const char *msg) {
   perror(msg);
+  fflush(stdout);
   exit(1);
 } 
 
@@ -38,6 +39,7 @@ int main(int argc, char *argv[]){
   // Check usage & args
   if (argc < 2) { 
     fprintf(stderr,"USAGE: %s port\n", argv[0]); 
+    fflush(stdout);
     exit(1);
   } 
   
@@ -45,6 +47,7 @@ int main(int argc, char *argv[]){
   int listenSocket = socket(AF_INET, SOCK_STREAM, 0);
   if (listenSocket < 0) {
     error("ERROR opening socket");
+    fflush(stdout);
   }
 
   // Set up the address struct for the server socket
@@ -54,6 +57,7 @@ int main(int argc, char *argv[]){
           (struct sockaddr *)&serverAddress, 
           sizeof(serverAddress)) < 0){
     error("ERROR on binding");
+    fflush(stdout);
   }
 
   // Start listening for connetions. Allow up to 5 connections to queue up
@@ -66,11 +70,12 @@ int main(int argc, char *argv[]){
                 &sizeOfClientInfo); 
     if (connectionSocket < 0)
       error("ERROR on accept");
-
+    fflush(stdout);
     spawnPid = fork();
     switch(spawnPid){
           case -1:
               perror("fork()\n");
+              fflush(stdout);
               exit(1);
               break;
           case 0:
@@ -82,7 +87,7 @@ int main(int argc, char *argv[]){
               charsRead = recv(connectionSocket, buffer, 255, 0); 
               if (charsRead < 0)
                 error("ERROR reading from socket");
-
+              fflush(stdout);
               //Verify identifty of client
               if(strcmp(buffer, "E") != 0) {
                 // Send a denied message back to the client
@@ -99,22 +104,25 @@ int main(int argc, char *argv[]){
                   error("ERROR writing to socket");
               }
 
-              //clear buffer
-              memset(buffer, '\0', 1000);
               int total = 0;
-
+              int bytesRead = 0;
+              //char *plainTxt = (char*)malloc(1);
               while (1){
                   memset(buffer, '\0', 1000);
-                  charsRead = recv(connectionSocket, buffer, 1000, 0);
+                  charsRead = recv(connectionSocket, buffer, sizeof(buffer) - 1, 0);
                   if (charsRead < 0)
                     error("ERROR reading from socket");
-                  if(charsRead == 0)
+                  if(charsRead == 0){
+                    //printf("%s", buffer);
+                    fflush(stdout);
                     break;
-                  printf("%s\n", buffer);
+                  }
+                  printf("%s", buffer);
+                  fflush(stdout);
+                  //plainTxt = (char*)realloc(plainTxt, strlen(plainTxt) + strlen(buffer));
+                  //strcat(plainTxt, buffer);
                   total += charsRead;
               }
-                
-              //printf("HERE: I received this from the client: \"%s\"\n", buffer);
               break;
           default:
               spawnPid = waitpid(spawnPid, &childStatus, 0);
