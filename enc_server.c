@@ -105,24 +105,29 @@ int main(int argc, char *argv[]){
               }
 
               int total = 0;
-              int bytesRead = 0;
-              //char *plainTxt = (char*)malloc(1);
+              size_t size = 1000;
+              char *plainTxt = (char*)malloc(1000);
               while (1){
                   memset(buffer, '\0', 1000);
                   charsRead = recv(connectionSocket, buffer, sizeof(buffer) - 1, 0);
                   if (charsRead < 0)
                     error("ERROR reading from socket");
                   if(charsRead == 0){
-                    //printf("%s", buffer);
-                    fflush(stdout);
                     break;
                   }
-                  printf("%s", buffer);
-                  fflush(stdout);
-                  //plainTxt = (char*)realloc(plainTxt, strlen(plainTxt) + strlen(buffer));
-                  //strcat(plainTxt, buffer);
+                  if (total == 0)
+                    strcpy(plainTxt, buffer);
+                  else {
+                    size += size;
+                    plainTxt = (char*)realloc(plainTxt, size + 1);
+                    strcat(plainTxt, buffer);
+                  }
                   total += charsRead;
               }
+
+              printf("%s\n", plainTxt);
+              fflush(stdout);
+              free(plainTxt);
               break;
           default:
               spawnPid = waitpid(spawnPid, &childStatus, 0);
