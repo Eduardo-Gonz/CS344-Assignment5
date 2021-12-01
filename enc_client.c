@@ -62,9 +62,26 @@ char *grabFile(char *fileName) {
   return line;
 }
 
-int validateFile(char *file) {
-  //go through the characters and make sure they are all alphabet characters or spaces.
+int validateFile(char *fileTxt) {
+  //make sure text is made up of alphabet characters or spaces.
+  int i = 0;
+  while(fileTxt[i] != '\0') {
+
+    if( (fileTxt[i] >= 'A' && fileTxt[i] <= 'Z') || fileTxt[i] == ' '){
+      i++;
+      continue;
+    }
+    fflush(stdout);
+    
+    return -1;
+ }
+
   return 1;
+}
+
+void removeNewLine(char *txt) {
+  int length = strlen(txt);
+  txt[length - 1] = '\0';
 }
 
 int main(int argc, char *argv[]) {
@@ -73,19 +90,26 @@ int main(int argc, char *argv[]) {
   char buffer[256];
   // Check usage & args
   if (argc < 4) { 
-    fprintf(stderr,"USAGE: %s plaintext key port\n", argv[0]); 
+    fprintf(stderr,"USAGE: %s plaintext key port\n", argv[0]);
+    fflush(stdout);
     exit(0); 
   } 
   
+  //grab text needed for encryption and remove trailing \n
   char *plainTxt = grabFile(argv[1]);
   char *keyTxt = grabFile(argv[2]);
+  removeNewLine(plainTxt);
+  removeNewLine(keyTxt);
+
+  //validate plainTxt and keyTxt
+  if(validateFile(plainTxt) == -1 || validateFile(keyTxt) == -1) {
+    fprintf(stderr, "Invalid characters in one or both files\n");
+    fflush(stdout);
+    exit(1);
+  }
 
   printf("PLAIN: %s\n", plainTxt);
-  printf("KEY: %s", keyTxt);
-
-  //open the files and validate them in two different functions
-  //function one will open them
-  //function two will validate them
+  printf("KEY: %s\n", keyTxt);
 
   // Create a socket
   socketFD = socket(AF_INET, SOCK_STREAM, 0); 
