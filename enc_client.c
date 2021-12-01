@@ -104,6 +104,8 @@ int main(int argc, char *argv[]) {
   //validate plainTxt and keyTxt
   if(validateFile(plainTxt) == -1 || validateFile(keyTxt) == -1) {
     fprintf(stderr, "Invalid characters in one or both files\n");
+    free(plainTxt);
+    free(keyTxt);
     fflush(stdout);
     exit(1);
   }
