@@ -161,10 +161,15 @@ int main(int argc, char *argv[]) {
   }
 
   size_t total = 0;        // how many bytes we've sent
-  size_t bytesleft = strlen(plainTxt); // how many we have left to send
+  //size_t bytesleft = strlen(allTxt); // how many we have left to send
+  char *allTxt = calloc(strlen(plainTxt) + strlen(keyTxt) + 1, sizeof(char));
+  strcat(allTxt, plainTxt);
+  strcat(allTxt, keyTxt);
+  strcat(allTxt, "}");
+  size_t bytesleft = strlen(allTxt);
 
-  while(total < strlen(plainTxt)) {
-    charsWritten = send(socketFD, plainTxt+total, bytesleft, 0);
+  while(total < strlen(allTxt)) {
+    charsWritten = send(socketFD, allTxt+total, bytesleft-total, 0);
     if (charsWritten < 0){
       error("CLIENT: ERROR writing to socket");
     }
@@ -175,44 +180,33 @@ int main(int argc, char *argv[]) {
     bytesleft -= charsWritten;
   }
 
-  //reset for sending the key
-  total = 0; 
-  bytesleft = strlen(keyTxt);
 
-  while(total < strlen(keyTxt)) {
-    charsWritten = send(socketFD, keyTxt+total, bytesleft, 0);
-    if (charsWritten < 0){
-      error("CLIENT: ERROR writing to socket");
-    }
-    if (charsWritten < strlen(buffer)){
-      printf("CLIENT: WARNING: Not all data written to socket!\n");
-    }
-    total += charsWritten;
-    bytesleft -= charsWritten;
-  }
-
-  char encryptedTxt[80000];
+  char encryptedTxt[80000] = {"\0"};
   char encryptBuffer[1000];
   charsRead = 0;
 
-  // while(1){
-  //   memset(encryptBuffer, '\0', 1000);
-  //   charsRead = recv(socketFD, encryptBuffer, sizeof(encryptBuffer) - 1, 0);
-  //   if (charsRead < 0)
-  //     error("ERROR reading from socket");
-  //   if(charsRead == 0){
-  //     break;
-  //   }
-  //   strcat(encryptedTxt, encryptBuffer);
-  //   if(strchr(encryptedTxt, '+') != NULL)
-  //     break;
-  //   total += charsRead;
-  // }
-  //printf("%s", encryptedTxt);
+  fflush(stdout);
+  while(1){
+    memset(encryptBuffer, '\0', 1000);
+    if(strchr(encryptedTxt, '+') != NULL)
+      break;
+    charsRead = recv(socketFD, encryptBuffer, sizeof(encryptBuffer) - 1, 0);
+    if (charsRead < 0)
+      error("ERROR reading from socket");
+    if(charsRead == 0){
+      break;
+    }
+    strcat(encryptedTxt, encryptBuffer);
+    total += charsRead;
+  }
+  encryptedTxt[strlen(encryptedTxt) - 1] = '\n';
+
+  printf("%s", encryptedTxt);
 
   // Close the socket and free allocated memory
   close(socketFD); 
   free(plainTxt);
   free(keyTxt);
+  free(allTxt);
   return 0;
 }

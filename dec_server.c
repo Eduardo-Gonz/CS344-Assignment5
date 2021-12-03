@@ -88,7 +88,6 @@ int main(int argc, char *argv[]){
 
   // Start listening for connetions. Allow up to 5 connections to queue up
   listen(listenSocket, 5);
-
   while(1){
     // Accept the connection request which creates a connection socket
     connectionSocket = accept(listenSocket, 
@@ -106,7 +105,6 @@ int main(int argc, char *argv[]){
               break;
           case 0:
               //Child Process
-
               //clear buffer
               memset(buffer, '\0', 1000);
               // Read the client's identifier from the socket
@@ -132,8 +130,10 @@ int main(int argc, char *argv[]){
 
               int total = 0;
               char allTxt[80000] = {"\0"};
-              while (1){
+              while(1){
                   memset(buffer, '\0', 1000);
+                  if(strchr(allTxt, '}') != NULL)
+                    break;
                   charsRead = recv(connectionSocket, buffer, sizeof(buffer) - 1, 0);
                   if (charsRead < 0)
                     error("ERROR reading from socket");
@@ -144,44 +144,40 @@ int main(int argc, char *argv[]){
                   total += charsRead;
               }
 
-              char keyTxt[80000] = {"\0"};
-
               // Split up the text
               char *saveptr;
-              char plain[80000];
+              char plain[80000] = {"\0"};
+              char keyTxt[80000] = {"\0"};
               // The first token is the plaintext
               char *token = strtok_r(allTxt, "+", &saveptr);
               strcpy(plain, token);
 
               // The next token is the key
-              token = strtok_r(NULL, "\0", &saveptr);
+              token = strtok_r(NULL, "}", &saveptr);
               strcpy(keyTxt, token);
 
               char *decryptedTxt = decryptTxt(plain, keyTxt);
-
               total = 0; 
               int bytesleft = strlen(decryptedTxt);
+              fflush(stdout);
 
               //Send the encrypted text back to client.
-            //   while(total < strlen(encryptedTxt)) {
-            //     charsWritten = send(connectionSocket, encryptedTxt+total, bytesleft, 0);
-            //     if (charsWritten < 0){
-            //       error("CLIENT: ERROR writing to socket");
-            //       exit(1);
-            //     }
-            //     if (charsWritten < strlen(buffer)){
-            //       printf("CLIENT: WARNING: Not all data written to socket!\n");
-            //     }
-            //     total += charsWritten;
-            //     bytesleft -= charsWritten;
-            // }
+              while(total < strlen(decryptedTxt)) {
+                charsWritten = send(connectionSocket, decryptedTxt+total, bytesleft - total, 0);
+                if (charsWritten < 0){
+                  error("CLIENT: ERROR writing to socket");
+                  exit(1);
+                }
+                if (charsWritten < strlen(buffer)){
+                  printf("CLIENT: WARNING: Not all data written to socket!\n");
+                }
+                total += charsWritten;
+                bytesleft -= charsWritten;
+              }   
 
-              printf("%s", decryptedTxt);
-              fflush(stdout); 
               exit(0);
-              break;
           default:
-              spawnPid = waitpid(spawnPid, &childStatus, 0);
+              spawnPid = waitpid(spawnPid, &childStatus, WNOHANG);
               break;
     } 
     // Close the connection socket for this client
