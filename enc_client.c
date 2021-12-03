@@ -84,6 +84,11 @@ void removeNewLine(char *txt) {
   txt[length - 1] = '\0';
 }
 
+void addSeperator(char *txt) {
+  int length = strlen(txt);
+  txt[length] = '+';
+}
+
 int main(int argc, char *argv[]) {
   int socketFD, portNumber, charsWritten, charsRead;
   struct sockaddr_in serverAddress;
@@ -110,6 +115,15 @@ int main(int argc, char *argv[]) {
     fflush(stdout);
     exit(1);
   }
+  if(strlen(plainTxt) > strlen(keyTxt)){
+    fprintf(stderr, "Key must be as long or longer than plain text");
+    free(plainTxt);
+    free(keyTxt);
+    fflush(stdout);
+    exit(1);
+  }
+
+  addSeperator(plainTxt);
 
   // Create a socket
   socketFD = socket(AF_INET, SOCK_STREAM, 0); 
@@ -145,10 +159,6 @@ int main(int argc, char *argv[]) {
     close(socketFD);
     exit(2);
   }
-  //send the key
-    //while loop to send this file
-  //print the encrypted key to stdout
-    //while loop to receive what server is sending
 
   size_t total = 0;        // how many bytes we've sent
   size_t bytesleft = strlen(plainTxt); // how many we have left to send
@@ -158,35 +168,46 @@ int main(int argc, char *argv[]) {
     if (charsWritten < 0){
       error("CLIENT: ERROR writing to socket");
     }
-  if (charsWritten < strlen(buffer)){
-    printf("CLIENT: WARNING: Not all data written to socket!\n");
-  }
+    if (charsWritten < strlen(buffer)){
+      printf("CLIENT: WARNING: Not all data written to socket!\n");
+    }
     total += charsWritten;
     bytesleft -= charsWritten;
   }
 
-  // Clear out the buffer array
-  // memset(buffer, '\0', sizeof(buffer));
+  //reset for sending the key
+  total = 0; 
+  bytesleft = strlen(keyTxt);
 
-  // // Send message to server
-  // // Write to the server
-  // charsWritten = send(socketFD, buffer, strlen(buffer), 0); 
-  // if (charsWritten < 0){
-  //   error("CLIENT: ERROR writing to socket");
-  // }
-  // if (charsWritten < strlen(buffer)){
-  //   printf("CLIENT: WARNING: Not all data written to socket!\n");
+  while(total < strlen(keyTxt)) {
+    charsWritten = send(socketFD, keyTxt+total, bytesleft, 0);
+    if (charsWritten < 0){
+      error("CLIENT: ERROR writing to socket");
+    }
+    if (charsWritten < strlen(buffer)){
+      printf("CLIENT: WARNING: Not all data written to socket!\n");
+    }
+    total += charsWritten;
+    bytesleft -= charsWritten;
+  }
+
+  char encryptedTxt[80000];
+  char encryptBuffer[1000];
+  charsRead = 0;
+
+  // while(1){
+  //   memset(encryptBuffer, '\0', 1000);
+  //   charsRead = recv(socketFD, encryptBuffer, sizeof(encryptBuffer) - 1, 0);
+  //   if (charsRead < 0)
+  //     error("ERROR reading from socket");
+  //   if(charsRead == 0){
+  //     break;
+  //   }
+  //   strcat(encryptedTxt, encryptBuffer);
+  //   total += charsRead;
   // }
 
-  // // Get return message from server
-  // // Clear out the buffer again for reuse
-  // memset(buffer, '\0', sizeof(buffer));
-  // // Read data from the socket, leaving \0 at end
-  // charsRead = recv(socketFD, buffer, sizeof(buffer) - 1, 0); 
-  // if (charsRead < 0){
-  //   error("CLIENT: ERROR reading from socket");
-  // }
-  // printf("CLIENT: I received this from the server: \"%s\"\n", buffer);
+  //printf("%s", encryptedTxt);
 
   // Close the socket and free allocated memory
   close(socketFD); 
@@ -194,5 +215,3 @@ int main(int argc, char *argv[]) {
   free(keyTxt);
   return 0;
 }
-
-//2 while loops in the server also.

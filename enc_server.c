@@ -29,8 +29,32 @@ void setupAddressStruct(struct sockaddr_in* address,
   address->sin_addr.s_addr = INADDR_ANY;
 }
 
+
+char *encryptTxt(char *plain, char *key) {
+  char alphabet[27] = {"ABCDEFGHIJKLMNOPQRSTUVWXYZ "};
+  int length = strlen(plain);
+  char *encryption = calloc(length + 1, sizeof(char));
+
+  for(int i = 0; i < length; i++) {
+    int plainVal = plain[i] - 65;
+    if(plain[i] == 32)
+      plainVal = 26;
+    int keyVal = key[i] - 65;
+    if(key[i] == 32)
+      keyVal = 26;
+    int encryptVal = (plainVal + keyVal) % 27;
+    if(encryptVal > 27)
+      encryptVal = 0;
+    char encrypChar = alphabet[encryptVal];
+    strncat(encryption, &encrypChar, 1);
+  }
+  
+  encryption[length] = '\n';
+  return encryption;
+}
+
 int main(int argc, char *argv[]){
-  int connectionSocket, charsRead, childStatus;
+  int connectionSocket, charsRead, charsWritten, childStatus;
   char buffer[1000];
   struct sockaddr_in serverAddress, clientAddress;
   socklen_t sizeOfClientInfo = sizeof(clientAddress);
@@ -105,8 +129,7 @@ int main(int argc, char *argv[]){
               }
 
               int total = 0;
-              size_t size = 1000;
-              char *plainTxt = (char*)malloc(1000);
+              char allTxt[80000] = {"\0"};
               while (1){
                   memset(buffer, '\0', 1000);
                   charsRead = recv(connectionSocket, buffer, sizeof(buffer) - 1, 0);
@@ -115,19 +138,45 @@ int main(int argc, char *argv[]){
                   if(charsRead == 0){
                     break;
                   }
-                  if (total == 0)
-                    strcpy(plainTxt, buffer);
-                  else {
-                    size += size;
-                    plainTxt = (char*)realloc(plainTxt, size + 1);
-                    strcat(plainTxt, buffer);
-                  }
+                  strcat(allTxt, buffer);
                   total += charsRead;
               }
 
-              printf("%s\n", plainTxt);
-              fflush(stdout);
-              free(plainTxt);
+              char keyTxt[80000] = {"\0"};
+
+              // Split up the text
+              char *saveptr;
+              char plain[80000];
+              // The first token is the plaintext
+              char *token = strtok_r(allTxt, "+", &saveptr);
+              strcpy(plain, token);
+
+              // The next token is the key
+              token = strtok_r(NULL, "\0", &saveptr);
+              strcpy(keyTxt, token);
+
+              char *encryptedTxt = encryptTxt(plain, keyTxt);
+
+              total = 0; 
+              int bytesleft = strlen(encryptedTxt);
+
+              //Send the encrypted text back to client.
+            //   while(total < strlen(encryptedTxt)) {
+            //     charsWritten = send(connectionSocket, encryptedTxt+total, bytesleft, 0);
+            //     if (charsWritten < 0){
+            //       error("CLIENT: ERROR writing to socket");
+            //       exit(1);
+            //     }
+            //     if (charsWritten < strlen(buffer)){
+            //       printf("CLIENT: WARNING: Not all data written to socket!\n");
+            //     }
+            //     total += charsWritten;
+            //     bytesleft -= charsWritten;
+            // }
+
+              printf("ENCRYPT: %s\n", encryptedTxt);
+              fflush(stdout); 
+              exit(0);
               break;
           default:
               spawnPid = waitpid(spawnPid, &childStatus, 0);
