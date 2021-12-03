@@ -5,6 +5,9 @@
 #include <sys/types.h>  // ssize_t
 #include <sys/socket.h> // send(),recv()
 #include <netdb.h>      // gethostbyname()
+#include <fcntl.h>
+#include <stdint.h>
+#include <dirent.h>
 
 /**
 * Client code
@@ -44,19 +47,83 @@ void setupAddressStruct(struct sockaddr_in* address,
         hostInfo->h_length);
 }
 
+char *grabFile(char *fileName) {
+  char * line = NULL;
+	size_t len = 0;
+	ssize_t read;
+
+  FILE *fp = fopen(fileName, "r");
+	if (fp == NULL)
+		exit(1);
+
+	read = getline(&line, &len, fp);
+	fclose(fp);
+
+  return line;
+}
+
+int validateFile(char *fileTxt) {
+  //make sure text is made up of alphabet characters or spaces.
+  int i = 0;
+  while(fileTxt[i] != '\0') {
+
+    if( (fileTxt[i] >= 'A' && fileTxt[i] <= 'Z') || fileTxt[i] == ' '){
+      i++;
+      continue;
+    }
+    fflush(stdout);
+    
+    return -1;
+ }
+
+  return 1;
+}
+
+void removeNewLine(char *txt) {
+  int length = strlen(txt);
+  txt[length - 1] = '\0';
+}
+
+void addSeperator(char *txt) {
+  int length = strlen(txt);
+  txt[length] = '+';
+}
+
 int main(int argc, char *argv[]) {
   int socketFD, portNumber, charsWritten, charsRead;
   struct sockaddr_in serverAddress;
   char buffer[256];
+
   // Check usage & args
-  if (argc < 3) { 
-    fprintf(stderr,"USAGE: %s hostname port\n", argv[0]); 
+  if (argc < 4) { 
+    fprintf(stderr,"USAGE: %s plaintext key port\n", argv[0]);
+    fflush(stdout);
     exit(0); 
   } 
-  //0 program name
-  //1 plaintext
-  //2 key
-  // port numbr
+  
+  //grab text needed for encryption and remove trailing \n
+  char *plainTxt = grabFile(argv[1]);
+  char *keyTxt = grabFile(argv[2]);
+  removeNewLine(plainTxt);
+  removeNewLine(keyTxt);
+
+  //validate plainTxt and keyTxt
+  if(validateFile(plainTxt) == -1 || validateFile(keyTxt) == -1) {
+    fprintf(stderr, "Invalid characters in one or both files\n");
+    free(plainTxt);
+    free(keyTxt);
+    fflush(stdout);
+    exit(1);
+  }
+  if(strlen(plainTxt) > strlen(keyTxt)){
+    fprintf(stderr, "Key must be as long or longer than plain text");
+    free(plainTxt);
+    free(keyTxt);
+    fflush(stdout);
+    exit(1);
+  }
+
+  addSeperator(plainTxt);
 
   // Create a socket
   socketFD = socket(AF_INET, SOCK_STREAM, 0); 
@@ -65,13 +132,9 @@ int main(int argc, char *argv[]) {
   }
 
    // Set up the server address struct
-  setupAddressStruct(&serverAddress, atoi(argv[2]), argv[1]);
+  setupAddressStruct(&serverAddress, atoi(argv[3]), "localhost");
 
-  //grab contents of plaintext file
-    //make sure that the characters in the file are A-Z and space
-    //quit program if file isn't correct
-  // do the same for the key file
-
+  //Send an identifer to ensure client connects to correct server
   // Connect to server
   if (connect(socketFD, (struct sockaddr*)&serverAddress, sizeof(serverAddress)) < 0){
     error("CLIENT: ERROR connecting");
@@ -84,59 +147,71 @@ int main(int argc, char *argv[]) {
   }
 
   charsRead = recv(socketFD, buffer, sizeof(buffer) - 1, 0); 
-  printf("%s", buffer);
+
   if (charsRead < 0){
     error("CLIENT: ERROR reading from socket");
   }
   if (strcmp(buffer, "Denied") == 0) {
-    fprintf(stderr, "CLIENT: Connection to server denied\n"); 
+    fprintf(stderr, "CLIENT: Connection to server denied\n");
+    fflush(stdout);
+    free(plainTxt);
+    free(keyTxt);
     close(socketFD);
     exit(2);
   }
 
+  size_t total = 0;        // how many bytes we've sent
+  size_t bytesleft = strlen(plainTxt); // how many we have left to send
 
-
-  
-  //send the plaintext
-    //while loop to send this file
-  //send the key
-    //while loop to send this file
-  //print the encrypted key to stdout
-    //while loop to receive what server is sending
-
-  // modify the code underneath
-  // Get input message from user
-  printf("CLIENT: Enter text to send to the server, and then hit enter: ");
-  // Clear out the buffer array
-  memset(buffer, '\0', sizeof(buffer));
-  // Get input from the user, trunc to buffer - 1 chars, leaving \0
-  fgets(buffer, sizeof(buffer) - 1, stdin);
-  // Remove the trailing \n that fgets adds
-  buffer[strcspn(buffer, "\n")] = '\0'; 
-
-  // Send message to server
-  // Write to the server
-  charsWritten = send(socketFD, buffer, strlen(buffer), 0); 
-  if (charsWritten < 0){
-    error("CLIENT: ERROR writing to socket");
-  }
-  if (charsWritten < strlen(buffer)){
-    printf("CLIENT: WARNING: Not all data written to socket!\n");
+  while(total < strlen(plainTxt)) {
+    charsWritten = send(socketFD, plainTxt+total, bytesleft, 0);
+    if (charsWritten < 0){
+      error("CLIENT: ERROR writing to socket");
+    }
+    if (charsWritten < strlen(buffer)){
+      printf("CLIENT: WARNING: Not all data written to socket!\n");
+    }
+    total += charsWritten;
+    bytesleft -= charsWritten;
   }
 
-  // Get return message from server
-  // Clear out the buffer again for reuse
-  memset(buffer, '\0', sizeof(buffer));
-  // Read data from the socket, leaving \0 at end
-  charsRead = recv(socketFD, buffer, sizeof(buffer) - 1, 0); 
-  if (charsRead < 0){
-    error("CLIENT: ERROR reading from socket");
-  }
-  printf("CLIENT: I received this from the server: \"%s\"\n", buffer);
+  //reset for sending the key
+  total = 0; 
+  bytesleft = strlen(keyTxt);
 
-  // Close the socket
+  while(total < strlen(keyTxt)) {
+    charsWritten = send(socketFD, keyTxt+total, bytesleft, 0);
+    if (charsWritten < 0){
+      error("CLIENT: ERROR writing to socket");
+    }
+    if (charsWritten < strlen(buffer)){
+      printf("CLIENT: WARNING: Not all data written to socket!\n");
+    }
+    total += charsWritten;
+    bytesleft -= charsWritten;
+  }
+
+  char decryptedTxt[80000];
+  char decryptBuffer[1000];
+  charsRead = 0;
+
+  // while(1){
+  //   memset(encryptBuffer, '\0', 1000);
+  //   charsRead = recv(socketFD, encryptBuffer, sizeof(encryptBuffer) - 1, 0);
+  //   if (charsRead < 0)
+  //     error("ERROR reading from socket");
+  //   if(charsRead == 0){
+  //     break;
+  //   }
+  //   strcat(encryptedTxt, encryptBuffer);
+  //   total += charsRead;
+  // }
+
+  //printf("%s", encryptedTxt);
+
+  // Close the socket and free allocated memory
   close(socketFD); 
+  free(plainTxt);
+  free(keyTxt);
   return 0;
 }
-
-//2 while loops in the server also.

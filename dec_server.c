@@ -10,6 +10,7 @@
 // Error function used for reporting issues
 void error(const char *msg) {
   perror(msg);
+  fflush(stdout);
   exit(1);
 } 
 
@@ -28,9 +29,35 @@ void setupAddressStruct(struct sockaddr_in* address,
   address->sin_addr.s_addr = INADDR_ANY;
 }
 
+
+char *decryptTxt(char *txt, char *key) {
+  char alphabet[27] = {"ABCDEFGHIJKLMNOPQRSTUVWXYZ "};
+  int length = strlen(txt);
+  char *decryption= calloc(length + 1, sizeof(char));
+
+  for(int i = 0; i < length; i++) {
+    int plainVal = txt[i] - 65;
+    if(txt[i] == 32)
+      plainVal = 26;
+    int keyVal = key[i] - 65;
+    if(key[i] == 32)
+      keyVal = 26;
+
+    int decryptVal = (plainVal - keyVal);
+    if(decryptVal < 0)
+      decryptVal += 27;
+    decryptVal = decryptVal % 27;
+    char decrypChar = alphabet[decryptVal];
+    strncat(decryption, &decrypChar, 1);
+  }
+  
+  decryption[length] = '\n';
+  return decryption;
+}
+
 int main(int argc, char *argv[]){
-  int connectionSocket, charsRead, childStatus;
-  char buffer[256];
+  int connectionSocket, charsRead, charsWritten, childStatus;
+  char buffer[1000];
   struct sockaddr_in serverAddress, clientAddress;
   socklen_t sizeOfClientInfo = sizeof(clientAddress);
   pid_t spawnPid;
@@ -38,6 +65,7 @@ int main(int argc, char *argv[]){
   // Check usage & args
   if (argc < 2) { 
     fprintf(stderr,"USAGE: %s port\n", argv[0]); 
+    fflush(stdout);
     exit(1);
   } 
   
@@ -45,6 +73,7 @@ int main(int argc, char *argv[]){
   int listenSocket = socket(AF_INET, SOCK_STREAM, 0);
   if (listenSocket < 0) {
     error("ERROR opening socket");
+    fflush(stdout);
   }
 
   // Set up the address struct for the server socket
@@ -54,11 +83,12 @@ int main(int argc, char *argv[]){
           (struct sockaddr *)&serverAddress, 
           sizeof(serverAddress)) < 0){
     error("ERROR on binding");
+    fflush(stdout);
   }
 
   // Start listening for connetions. Allow up to 5 connections to queue up
   listen(listenSocket, 5);
-  
+
   while(1){
     // Accept the connection request which creates a connection socket
     connectionSocket = accept(listenSocket, 
@@ -66,24 +96,24 @@ int main(int argc, char *argv[]){
                 &sizeOfClientInfo); 
     if (connectionSocket < 0)
       error("ERROR on accept");
-
+    fflush(stdout);
     spawnPid = fork();
     switch(spawnPid){
           case -1:
               perror("fork()\n");
+              fflush(stdout);
               exit(1);
               break;
           case 0:
               //Child Process
 
-              //Verify identity of client
               //clear buffer
-              memset(buffer, '\0', 256);
+              memset(buffer, '\0', 1000);
               // Read the client's identifier from the socket
               charsRead = recv(connectionSocket, buffer, 255, 0); 
               if (charsRead < 0)
                 error("ERROR reading from socket");
-
+              fflush(stdout);
               //Verify identifty of client
               if(strcmp(buffer, "D") != 0) {
                 // Send a denied message back to the client
@@ -100,21 +130,55 @@ int main(int argc, char *argv[]){
                   error("ERROR writing to socket");
               }
 
-              // Get the message from the client and display it
-              memset(buffer, '\0', 256);
-              // Read the client's message from the socket
-              charsRead = recv(connectionSocket, buffer, 255, 0); 
-              if (charsRead < 0)
-                error("ERROR reading from socket");
+              int total = 0;
+              char allTxt[80000] = {"\0"};
+              while (1){
+                  memset(buffer, '\0', 1000);
+                  charsRead = recv(connectionSocket, buffer, sizeof(buffer) - 1, 0);
+                  if (charsRead < 0)
+                    error("ERROR reading from socket");
+                  if(charsRead == 0){
+                    break;
+                  }
+                  strcat(allTxt, buffer);
+                  total += charsRead;
+              }
 
-              printf("HERE: I received this from the client: \"%s\"\n", buffer);
+              char keyTxt[80000] = {"\0"};
 
-              // Send a Success message back to the client
-              charsRead = send(connectionSocket, 
-                              "I am the server, and I got your message", 39, 0); 
-              if (charsRead < 0)
-                error("ERROR writing to socket");
+              // Split up the text
+              char *saveptr;
+              char plain[80000];
+              // The first token is the plaintext
+              char *token = strtok_r(allTxt, "+", &saveptr);
+              strcpy(plain, token);
 
+              // The next token is the key
+              token = strtok_r(NULL, "\0", &saveptr);
+              strcpy(keyTxt, token);
+
+              char *decryptedTxt = decryptTxt(plain, keyTxt);
+
+              total = 0; 
+              int bytesleft = strlen(decryptedTxt);
+
+              //Send the encrypted text back to client.
+            //   while(total < strlen(encryptedTxt)) {
+            //     charsWritten = send(connectionSocket, encryptedTxt+total, bytesleft, 0);
+            //     if (charsWritten < 0){
+            //       error("CLIENT: ERROR writing to socket");
+            //       exit(1);
+            //     }
+            //     if (charsWritten < strlen(buffer)){
+            //       printf("CLIENT: WARNING: Not all data written to socket!\n");
+            //     }
+            //     total += charsWritten;
+            //     bytesleft -= charsWritten;
+            // }
+
+              printf("DECRYPT: %s\n", decryptedTxt);
+              fflush(stdout); 
+              exit(0);
               break;
           default:
               spawnPid = waitpid(spawnPid, &childStatus, 0);
