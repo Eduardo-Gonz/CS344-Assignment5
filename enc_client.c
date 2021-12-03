@@ -201,7 +201,8 @@ int main(int argc, char *argv[]) {
   }
   encryptedTxt[strlen(encryptedTxt) - 1] = '\n';
 
-  printf("%s", encryptedTxt);
+  //printf("%s", encryptedTxt);
+  write(1, encryptedTxt, strlen(encryptedTxt));
 
   // Close the socket and free allocated memory
   close(socketFD); 

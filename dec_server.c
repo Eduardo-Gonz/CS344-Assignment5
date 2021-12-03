@@ -112,6 +112,7 @@ int main(int argc, char *argv[]){
               if (charsRead < 0)
                 error("ERROR reading from socket");
               fflush(stdout);
+	      //printf("%s", buffer);
               //Verify identifty of client
               if(strcmp(buffer, "D") != 0) {
                 // Send a denied message back to the client

@@ -92,7 +92,7 @@ void addSeperator(char *txt) {
 int main(int argc, char *argv[]) {
   int socketFD, portNumber, charsWritten, charsRead;
   struct sockaddr_in serverAddress;
-  char buffer[256];
+  char buffer[256] = {"\0"};
 
   // Check usage & args
   if (argc < 4) { 
@@ -141,7 +141,6 @@ int main(int argc, char *argv[]) {
   }
 
   charsWritten = send(socketFD, "D", 1, 0); 
-
   if (charsWritten < 0){
     error("CLIENT: ERROR writing to socket");
   }
