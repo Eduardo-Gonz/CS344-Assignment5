@@ -191,21 +191,24 @@ int main(int argc, char *argv[]) {
     bytesleft -= charsWritten;
   }
 
-  char encryptedTxt[80000];
+  char encryptedTxt[80000] = {'\0'};
   char encryptBuffer[1000];
   charsRead = 0;
 
-  // while(1){
-  //   memset(encryptBuffer, '\0', 1000);
-  //   charsRead = recv(socketFD, encryptBuffer, sizeof(encryptBuffer) - 1, 0);
-  //   if (charsRead < 0)
-  //     error("ERROR reading from socket");
-  //   if(charsRead == 0){
-  //     break;
-  //   }
-  //   strcat(encryptedTxt, encryptBuffer);
-  //   total += charsRead;
-  // }
+  while(1){
+    memset(encryptBuffer, '\0', 1000);
+    charsRead = recv(socketFD, encryptBuffer+total, sizeof(encryptBuffer) - 1, 0);
+    printf("%s", encryptBuffer);
+    if (charsRead < 0)
+      error("ERROR reading from socket");
+    if(charsRead == 0){
+      break;
+    }
+    strcat(encryptedTxt, encryptBuffer);
+    if(strchr(encryptedTxt, '+') != NULL)
+      break;
+    total += charsRead;
+  }
 
   //printf("%s", encryptedTxt);
 
