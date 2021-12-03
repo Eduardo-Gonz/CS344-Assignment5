@@ -176,7 +176,7 @@ int main(int argc, char *argv[]){
             //     bytesleft -= charsWritten;
             // }
 
-              printf("DECRYPT: %s\n", decryptedTxt);
+              printf("%s", decryptedTxt);
               fflush(stdout); 
               exit(0);
               break;

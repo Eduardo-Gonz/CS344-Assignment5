@@ -49,7 +49,7 @@ char *encryptTxt(char *plain, char *key) {
     strncat(encryption, &encrypChar, 1);
   }
   
-  encryption[length] = '+';
+  encryption[length] = '\n';
   return encryption;
 }
 
@@ -160,22 +160,21 @@ int main(int argc, char *argv[]){
               total = 0; 
               int bytesleft = strlen(encryptedTxt);
 
-              //Send the encrypted text back to client.
-              while(total < strlen(encryptedTxt)) {
-                charsWritten = send(connectionSocket, encryptedTxt+total, bytesleft, 0);
-                if (charsWritten < 0){
-                  error("CLIENT: ERROR writing to socket");
-                  exit(1);
-                }
-                if (charsWritten < strlen(buffer)){
-                  printf("CLIENT: WARNING: Not all data written to socket!\n");
-                }
-                total += charsWritten;
-                bytesleft -= charsWritten;
-                printf("%d", charsWritten);
-            }
+              // //Send the encrypted text back to client.
+              // while(total < strlen(encryptedTxt)) {
+              //   charsWritten = send(connectionSocket, encryptedTxt+total, bytesleft, 0);
+              //   if (charsWritten < 0){
+              //     error("CLIENT: ERROR writing to socket");
+              //     exit(1);
+              //   }
+              //   if (charsWritten < strlen(buffer)){
+              //     printf("CLIENT: WARNING: Not all data written to socket!\n");
+              //   }
+              //   total += charsWritten;
+              //   bytesleft -= charsWritten;
+              // }   
 
-              printf("ENCRYPT: %s\n", encryptedTxt);
+              printf("%s", encryptedTxt);
               fflush(stdout); 
               exit(0);
               break;
